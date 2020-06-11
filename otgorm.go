@@ -124,7 +124,7 @@ func registerCallbacks(db *gorm.DB, name string, c *callbacks) {
 func setStatement(scope *gorm.Scope) string {
 	replacer := make([]string, 0)
 	for i := 1; i <= len(scope.SQLVars); i++ {
-		var sqlValue string
+		var sqlValue = "NULL"
 
 		// get value from sql vars
 		val := scope.SQLVars[i-1]
@@ -137,9 +137,6 @@ func setStatement(scope *gorm.Scope) string {
 		case reflect.String:
 			sqlValue = fmt.Sprintf(`'%s'`, val)
 		case reflect.Interface:
-
-			// set default value null
-			sqlValue = "NULL"
 
 			// check type of interface
 			switch val.(type) {
