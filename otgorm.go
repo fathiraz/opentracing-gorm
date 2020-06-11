@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	opentracing "github.com/opentracing/opentracing-go"
@@ -102,6 +103,10 @@ func (c *callbacks) after(scope *gorm.Scope, operation string) {
 		switch ref {
 		case reflect.String:
 			sqlValue = fmt.Sprintf(`'%s'`, val)
+		case reflect.Interface:
+			if _, ok := val.(time.Time); ok {
+				sqlValue = fmt.Sprintf(`'%v'`, val)
+			}
 		default:
 			sqlValue = fmt.Sprintf(`%v`, val)
 		}
