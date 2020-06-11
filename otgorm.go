@@ -95,8 +95,11 @@ func (c *callbacks) after(scope *gorm.Scope, operation string) {
 		// get value from sql vars
 		val := scope.SQLVars[i-1]
 
+		// get reflect
+		ref := reflect.ValueOf(val).Kind()
+
 		// check for reflect kind of string
-		switch reflect.ValueOf(val).Kind() {
+		switch ref {
 		case reflect.String:
 			sqlValue = fmt.Sprintf(`'%s'`, val)
 		default:
@@ -109,7 +112,8 @@ func (c *callbacks) after(scope *gorm.Scope, operation string) {
 
 	// replace statement
 	r := strings.NewReplacer(replacer...)
-	ext.DBStatement.Set(sp, r.Replace(scope.SQL))
+	statement := r.Replace(scope.SQL)
+	ext.DBStatement.Set(sp, statement)
 
 	sp.Finish()
 }
