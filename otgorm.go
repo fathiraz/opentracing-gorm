@@ -3,6 +3,7 @@ package otgorm
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -62,7 +63,8 @@ func (c *callbacks) before(scope *gorm.Scope) {
 	parentSpan := val.(opentracing.Span)
 	tr := parentSpan.Tracer()
 	sp := tr.StartSpan("sql", opentracing.ChildOf(parentSpan.Context()))
-	ext.DBType.Set(sp, "sql")
+	ext.DBType.Set(sp, scope.DB().Dialect().GetName())
+	ext.DBInstance.Set(sp, scope.InstanceID())
 	scope.Set(spanGormKey, sp)
 }
 
@@ -76,11 +78,39 @@ func (c *callbacks) after(scope *gorm.Scope, operation string) {
 		operation = strings.ToUpper(strings.Split(scope.SQL, " ")[0])
 	}
 	ext.Error.Set(sp, scope.HasError())
-	ext.DBStatement.Set(sp, scope.SQL)
 	sp.SetTag("db.table", scope.TableName())
 	sp.SetTag("db.method", operation)
-	sp.SetTag("db.err", scope.HasError())
 	sp.SetTag("db.count", scope.DB().RowsAffected)
+
+	// set db error message tracing tag
+	if scope.HasError() {
+		sp.SetTag("db.err", scope.DB().Error)
+	}
+
+	// set db full statement tracing tag
+	replacer := make([]string, 0)
+	for i := 1; i <= len(scope.SQLVars); i++ {
+		var sqlValue = ""
+
+		// get value from sql vars
+		val := scope.SQLVars[i-1]
+
+		// check for reflect kind of string
+		switch reflect.ValueOf(val).Kind() {
+		case reflect.String:
+			sqlValue = fmt.Sprintf(`'%s'`, val)
+		default:
+			sqlValue = fmt.Sprintf(`%v`, val)
+		}
+
+		// push to replacer
+		replacer = append(replacer, fmt.Sprintf(`$%d`, i), sqlValue)
+	}
+
+	// replace statement
+	r := strings.NewReplacer(replacer...)
+	ext.DBStatement.Set(sp, r.Replace(scope.SQL))
+
 	sp.Finish()
 }
 
