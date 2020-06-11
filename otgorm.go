@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/lib/pq"
+	"github.com/bmizerany/pq"
 	"reflect"
 	"strings"
 	"time"
