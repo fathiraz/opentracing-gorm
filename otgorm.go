@@ -122,7 +122,8 @@ func registerCallbacks(db *gorm.DB, name string, c *callbacks) {
 }
 
 func setStatement(scope *gorm.Scope) string {
-	replacer := make([]string, 0)
+	var result = scope.SQL
+
 	for i := 1; i <= len(scope.SQLVars); i++ {
 		var sqlValue = "NULL"
 
@@ -183,15 +184,9 @@ func setStatement(scope *gorm.Scope) string {
 			sqlValue = fmt.Sprintf(`%v`, val)
 		}
 
-		// push to replacer
-		replacer = append(replacer, fmt.Sprintf(`$%d`, i), sqlValue)
+		// replace string
+		result = strings.Replace(result, fmt.Sprintf(`$%d`, i), sqlValue, -1)
 	}
-
-	// replace statement
-	r := strings.NewReplacer(replacer...)
-
-	// set result
-	result := r.Replace(scope.SQL)
 
 	return result
 }
